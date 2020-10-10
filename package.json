@@ -1,0 +1,39 @@
+{
+  "name": "trezor-connect",
+  "version": "8.1.14-extended",
+  "author": "Trezor <info@trezor.io>",
+  "homepage": "https://github.com/trezor/connect",
+  "description": "High-level javascript interface for Trezor hardware wallet.",
+  "license": "SEE LICENSE IN LICENSE.md",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/trezor/connect.git"
+  },
+  "bugs": {
+    "url": "https://github.com/trezor/connect/issues"
+  },
+  "keywords": [
+    "Trezor",
+    "trezor-connect",
+    "javascript"
+  ],
+  "main": "lib/index.js",
+  "dependencies": {
+    "@babel/runtime": "^7.11.2",
+    "@trezor/utxo-lib": "https://github.com/JoeGruffins/trezor-utxo-lib#97c8cd1060c73ac65a5bd98d206eef7a3a63fa17",
+    "events": "^3.2.0",
+    "whatwg-fetch": "^3.4.1",
+    "@trezor/blockchain-link": "^1.0.14",
+    "@trezor/rollout": "^1.0.4",
+    "bchaddrjs": "0.4.9",
+    "bignumber.js": "^9.0.0",
+    "bowser": "^2.11.0",
+    "hd-wallet": "9.0.1",
+    "keccak": "^3.0.1",
+    "node-fetch": "^2.6.1",
+    "parse-uri": "^1.0.3",
+    "tiny-worker": "^2.3.0",
+    "trezor-link": "1.7.0"
+  },
+  "types": "lib/typescript/index.d.ts"
+}
