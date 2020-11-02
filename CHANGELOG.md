@@ -1,7 +1,15 @@
-# 8.1.15 (unreleased)
+# 8.1.16
+
+### Added
+- trezor onion address to allowed list.
+- 2.3.4 fw release.
+
+# 8.1.15
 
 ### Fixed
 - `TrezorConnect.cancel` method called during Pin/Passphrase/Word requests.
+- `TrezorConnect.cardanoGetAddress` added missing validation for `protocolMagic` param.
+- Device `Features.unlocked` translated from legacy field `pin_cached`.
 
 ### Changed
 - Removed timestamp from iframe URL.
