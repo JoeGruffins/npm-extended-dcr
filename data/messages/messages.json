@@ -1295,6 +1295,10 @@
                                         {
                                             "name": "SSTXCHANGE",
                                             "id": 8
+                                        },
+                                        {
+                                            "name": "SSTXCOMMITMENTOWNED",
+                                            "id": 9
                                         }
                                     ],
                                     "options": {}

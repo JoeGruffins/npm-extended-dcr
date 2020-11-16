@@ -35,7 +35,7 @@ export const validateTrezorOutputs = (outputs: Array<TransactionOutput>, coinInf
             throw ERRORS.TypedError('Method_InvalidParameter', 'Cannot use address and address_n in one output');
         }
 
-        if (output.address_n) {
+        if (output.address_n && output.script_type !== 'SSTXCOMMITMENTOWNED') {
             const scriptType = getOutputScriptType(output.address_n);
             if (output.script_type !== scriptType) throw ERRORS.TypedError('Method_InvalidParameter', `Output change script_type should be set to ${scriptType}`);
         }
@@ -59,6 +59,7 @@ export const validateHDOutput = (output: BuildTxOutputRequest, coinInfo: Bitcoin
     };
 
     switch (output.type) {
+        case 'sstxcommitmentowned' :
         case 'opreturn' :
             validateParams(output, [ { name: 'dataHex', type: 'string' } ]);
             return {
@@ -111,6 +112,14 @@ export const outputToTrezor = (output: BuildTxOutput, coinInfo: BitcoinNetworkIn
             throw ERRORS.TypedError('Method_InvalidParameter', 'opReturn output should not contains value');
         }
         const data: Buffer = output.opReturnData;
+        if (output.script_type === 'SSTXCOMMITMENTOWNED' ) {
+            return {
+                address_n: output.path,
+                amount: '0',
+                op_return_data: data.toString('hex'),
+                script_type: 'SSTXCOMMITMENTOWNED',
+            };
+        }
         return {
             amount: '0',
             op_return_data: data.toString('hex'),

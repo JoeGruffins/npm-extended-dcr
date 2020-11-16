@@ -131,6 +131,13 @@ export type TransactionOutput =
           amount: '0';
           op_return_data: string;
           script_type: 'PAYTOOPRETURN';
+      }
+    | {
+          address?: undefined;
+          address_n: number[];
+          amount: '0';
+          op_return_data: string;
+          script_type: 'SSTXCOMMITMENTOWNED';
       };
 
 export interface TransactionBinOutput {
