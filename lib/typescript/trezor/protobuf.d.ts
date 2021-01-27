@@ -114,7 +114,7 @@ export type TransactionOutput =
     | {
           address: string;
           address_n?: undefined;
-          script_type: 'PAYTOADDRESS' | 'SSTXSUBMISSIONPKH' | 'SSTXSUBMISSIONSH' | 'SSTXCHANGE';
+          script_type: 'PAYTOADDRESS' | 'SSTXSUBMISSIONPKH' | 'SSTXCHANGE';
           amount: string;
           multisig?: MultisigRedeemScriptType;
       }

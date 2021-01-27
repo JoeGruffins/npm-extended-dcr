@@ -1289,16 +1289,12 @@
                                             "id": 6
                                         },
                                         {
-                                            "name": "SSTXSUBMISSIONSH",
+                                            "name": "SSTXCHANGE",
                                             "id": 7
                                         },
                                         {
-                                            "name": "SSTXCHANGE",
-                                            "id": 8
-                                        },
-                                        {
                                             "name": "SSTXCOMMITMENTOWNED",
-                                            "id": 9
+                                            "id": 8
                                         }
                                     ],
                                     "options": {}
