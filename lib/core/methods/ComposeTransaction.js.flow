@@ -4,7 +4,7 @@ import BigNumber from 'bignumber.js';
 import AbstractMethod from './AbstractMethod';
 import Discovery from './helpers/Discovery';
 import { validateParams, getFirmwareRange } from './helpers/paramsValidator';
-import { validatePath } from '../../utils/pathUtils';
+import * as pathUtils from '../../utils/pathUtils';
 import { resolveAfter } from '../../utils/promiseUtils';
 
 import { UI, ERRORS } from '../../constants';
@@ -23,16 +23,14 @@ import {
     transformReferencedTransactions,
 } from './tx';
 import signTx from './helpers/signtx';
+import signTxLegacy from './helpers/signtx-legacy';
 import verifyTx from './helpers/signtxVerify';
 
 import { UiMessage } from '../../message/builder';
 
-import type {
-    BuildTxOutputRequest,
-    BuildTxResult,
-} from 'hd-wallet';
+import type { BuildTxOutputRequest, BuildTxResult } from 'hd-wallet';
 import type { CoreMessage, BitcoinNetworkInfo } from '../../types';
-import type { SignedTx, TransactionOptions } from '../../types/trezor/protobuf';
+import type { SignedTransaction, TransactionOptions } from '../../types/networks/bitcoin';
 import type { DiscoveryAccount, AccountUtxo, PrecomposeParams, PrecomposedTransaction } from '../../types/account';
 
 type Params = {
@@ -41,6 +39,7 @@ type Params = {
     push: boolean;
     account?: $ElementType<PrecomposeParams, 'account'>;
     feeLevels?: $ElementType<PrecomposeParams, 'feeLevels'>;
+    baseFee?: $ElementType<PrecomposeParams, 'baseFee'>;
 }
 
 export default class ComposeTransaction extends AbstractMethod {
@@ -51,7 +50,7 @@ export default class ComposeTransaction extends AbstractMethod {
         super(message);
         this.requiredPermissions = ['read', 'write'];
 
-        const payload: Object = message.payload;
+        const { payload } = message;
         // validate incoming parameters
         validateParams(payload, [
             { name: 'outputs', type: 'array', obligatory: true, allowEmpty: true },
@@ -59,9 +58,10 @@ export default class ComposeTransaction extends AbstractMethod {
             { name: 'push', type: 'boolean' },
             { name: 'account', type: 'object' },
             { name: 'feeLevels', type: 'array' },
+            { name: 'baseFee', type: 'number' },
         ]);
 
-        const coinInfo: ?BitcoinNetworkInfo = getBitcoinNetwork(payload.coin);
+        const coinInfo = getBitcoinNetwork(payload.coin);
         if (!coinInfo) {
             throw ERRORS.TypedError('Method_UnknownCoin');
         }
@@ -72,8 +72,8 @@ export default class ComposeTransaction extends AbstractMethod {
         this.firmwareRange = getFirmwareRange(this.name, coinInfo, this.firmwareRange);
 
         // validate each output and transform into hd-wallet format
-        const outputs: Array<BuildTxOutputRequest> = [];
-        let total: BigNumber = new BigNumber(0);
+        const outputs: BuildTxOutputRequest[] = [];
+        let total = new BigNumber(0);
         payload.outputs.forEach(out => {
             const output = validateHDOutput(out, coinInfo);
             if (typeof output.amount === 'string') {
@@ -82,7 +82,7 @@ export default class ComposeTransaction extends AbstractMethod {
             outputs.push(output);
         });
 
-        const sendMax: boolean = outputs.find(o => o.type === 'send-max') !== undefined;
+        const sendMax = outputs.find(o => o.type === 'send-max') !== undefined;
 
         // there should be only one output when using send-max option
         // if (sendMax && outputs.length > 1) {
@@ -108,23 +108,27 @@ export default class ComposeTransaction extends AbstractMethod {
             coinInfo,
             account: payload.account,
             feeLevels: payload.feeLevels,
+            baseFee: payload.baseFee,
             push: typeof payload.push === 'boolean' ? payload.push : false,
         };
     }
 
     async precompose(account: $ElementType<PrecomposeParams, 'account'>, feeLevels: $ElementType<PrecomposeParams, 'feeLevels'>): Promise<PrecomposedTransaction[]> {
-        const { coinInfo, outputs } = this.params;
+        const { coinInfo, outputs, baseFee } = this.params;
+        const address_n = pathUtils.validatePath(account.path);
+        const segwit = pathUtils.isSegwitPath(address_n) || pathUtils.isBech32Path(address_n);
         const composer = new TransactionComposer({
             account: {
-                type: 'normal',
-                label: 'normal',
-                descriptor: 'normal',
-                address_n: validatePath(account.path),
+                type: segwit ? 'normal' : 'legacy',
+                label: 'Account',
+                descriptor: account.path,
+                address_n,
                 addresses: account.addresses,
             },
             utxo: account.utxo,
             coinInfo,
             outputs,
+            baseFee,
         });
 
         // This is mandatory, hd-wallet expects current block height
@@ -154,7 +158,7 @@ export default class ComposeTransaction extends AbstractMethod {
         });
     }
 
-    async run(): Promise<SignedTx | PrecomposedTransaction[]> {
+    async run(): Promise<SignedTransaction | PrecomposedTransaction[]> {
         if (this.params.account && this.params.feeLevels) {
             return this.precompose(this.params.account, this.params.feeLevels);
         }
@@ -163,7 +167,7 @@ export default class ComposeTransaction extends AbstractMethod {
         const { account, utxo } = await this.selectAccount();
 
         // wait for fee selection
-        const response: string | SignedTx = await this.selectFee(account, utxo);
+        const response = await this.selectFee(account, utxo);
         // check for interruption
         if (!this.discovery) {
             throw ERRORS.TypedError('Runtime', 'ComposeTransaction: selectFee response received after dispose');
@@ -253,7 +257,7 @@ export default class ComposeTransaction extends AbstractMethod {
         };
     }
 
-    async selectFee(account: DiscoveryAccount, utxo: AccountUtxo[]): Promise<string | SignedTx> {
+    async selectFee(account: DiscoveryAccount, utxo: AccountUtxo[]): Promise<string | SignedTransaction> {
         const { coinInfo, outputs } = this.params;
 
         // get backend instance (it should be initialized before)
@@ -289,7 +293,7 @@ export default class ComposeTransaction extends AbstractMethod {
         return await this._selectFeeUiResponse(composer);
     }
 
-    async _selectFeeUiResponse(composer: TransactionComposer): Promise<string | SignedTx> {
+    async _selectFeeUiResponse(composer: TransactionComposer): Promise<string | SignedTransaction> {
         const resp = await this.createUiPromise(UI.RECEIVE_FEE, this.device).promise;
         switch (resp.payload.type) {
             case 'compose-custom':
@@ -311,20 +315,12 @@ export default class ComposeTransaction extends AbstractMethod {
         }
     }
 
-    async _sign(tx: BuildTxResult): Promise<SignedTx> {
+    async _sign(tx: BuildTxResult): Promise<SignedTransaction> {
         if (tx.type !== 'final') throw ERRORS.TypedError('Runtime', 'ComposeTransaction: Trying to sign unfinished tx');
 
         const { coinInfo } = this.params;
 
-        let refTxs = [];
-        const refTxsIds = getReferencedTransactions(tx.transaction.inputs);
-        if (refTxsIds.length > 0) {
-            const blockchain = await initBlockchain(coinInfo, this.postMessage);
-            const bjsRefTxs = await blockchain.getReferencedTransactions(refTxsIds);
-            refTxs = transformReferencedTransactions(bjsRefTxs);
-        }
-
-        const options: TransactionOptions = {};
+        const options: $Shape<TransactionOptions> = {};
         if (coinInfo.network.consensusBranchId) {
             // zcash
             options.overwintered = true;
@@ -339,7 +335,16 @@ export default class ComposeTransaction extends AbstractMethod {
         const inputs = tx.transaction.inputs.map(inp => inputToTrezor(inp, 0xffffffff));
         const outputs = tx.transaction.outputs.sorted.map(out => outputToTrezor(out, coinInfo));
 
-        const response = await signTx(
+        let refTxs = [];
+        const refTxsIds = getReferencedTransactions(inputs);
+        if (refTxsIds.length > 0) {
+            const blockchain = await initBlockchain(coinInfo, this.postMessage);
+            const rawTxs = await blockchain.getTransactions(refTxsIds);
+            refTxs = transformReferencedTransactions(rawTxs, coinInfo);
+        }
+
+        const signTxMethod = !this.device.unavailableCapabilities['replaceTransaction'] ? signTx : signTxLegacy;
+        const response = await signTxMethod(
             this.device.getCommands().typedCall.bind(this.device.getCommands()),
             inputs,
             outputs,

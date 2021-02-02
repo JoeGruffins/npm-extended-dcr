@@ -1,4 +1,5 @@
-import { TransactionInput, TransactionOutput } from './trezor/protobuf';
+import { TxInputType, TxOutputType } from './trezor/protobuf';
+import { VinVout } from './backend/transactions';
 
 // getAccountInfo params
 export interface GetAccountInfo {
@@ -100,6 +101,13 @@ export interface AccountTransaction {
         gasUsed?: number;
         gasPrice: string;
     };
+    details: {
+        vin: VinVout[];
+        vout: VinVout[];
+        size: number;
+        totalInput: string;
+        totalOutput: string;
+    };
 }
 
 // getAccountInfo response
@@ -193,6 +201,8 @@ export interface PrecomposeParams {
     feeLevels: Array<{
         feePerUnit: string;
     }>;
+    baseFee?: number;
+    floorBaseFee?: boolean;
     coin: string;
 }
 
@@ -217,8 +227,8 @@ export type PrecomposedTransaction =
           feePerByte: string;
           bytes: number;
           transaction: {
-              inputs: TransactionInput[];
-              outputs: TransactionOutput[];
+              inputs: TxInputType[];
+              outputs: TxOutputType[];
           };
       };
 

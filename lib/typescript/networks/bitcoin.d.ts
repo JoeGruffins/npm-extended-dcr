@@ -1,9 +1,10 @@
 import {
-    TransactionInput,
-    TransactionOutput,
-    RefTransaction,
+    RefTxInputType,
+    TxInput as OrigTxInputType,
+    TxInputType,
+    TxOutputType,
+    TxOutputBinType,
     Address as ProtobufAddress,
-    SignedTx,
 } from '../trezor/protobuf';
 
 // getAddress params
@@ -17,6 +18,7 @@ export interface GetAddress {
 
 // getAddress response
 export type Address = ProtobufAddress & {
+    path: number[];
     serializedPath: string;
 };
 
@@ -27,11 +29,71 @@ export interface GetPublicKey {
     crossChain?: boolean;
 }
 
+// combined Bitcoin.PublicKey and Bitcoin.HDNode
+export interface HDNodeResponse {
+    path: number[];
+    serializedPath: string;
+    childNum: number;
+    xpub: string;
+    xpubSegwit?: string;
+    chainCode: string;
+    publicKey: string;
+    fingerprint: number;
+    depth: number;
+}
+
+// based on PROTO.TransactionType, with required fields
+export type RefTransaction = {
+    hash: string;
+    version: number;
+    inputs: RefTxInputType[];
+    bin_outputs: TxOutputBinType[];
+    outputs?: undefined;
+    lock_time: number;
+    extra_data?: string;
+    expiry?: number;
+    overwintered?: boolean;
+    version_group_id?: number;
+    timestamp?: number;
+    branch_id?: number;
+} | {
+    hash: string;
+    version: number;
+    inputs: OrigTxInputType[];
+    bin_outputs?: undefined;
+    outputs: TxOutputType[];
+    lock_time: number;
+    extra_data?: string;
+    expiry?: number;
+    overwintered?: boolean;
+    version_group_id?: number;
+    timestamp?: number;
+    branch_id?: number;
+}
+
+// based on PROTO.SignTx, only optional fields
+export type TransactionOptions = {
+    version?: number;
+    lock_time?: number;
+    expiry?: number;
+    overwintered?: boolean;
+    version_group_id?: number;
+    timestamp?: number;
+    branch_id?: number;
+};
+
 // signTransaction params
 export interface SignTransaction {
-    inputs: TransactionInput[];
-    outputs: TransactionOutput[];
+    inputs: TxInputType[];
+    outputs: TxOutputType[];
     refTxs?: RefTransaction[];
+    account?: { // Partial account (addresses)
+        addresses: {
+            used: { path: string; address: string }[];
+            unused: { path: string; address: string }[];
+            change: { path: string; address: string }[];
+        };
+    };
     coin: string;
     locktime?: number;
     timestamp?: number;
@@ -42,7 +104,9 @@ export interface SignTransaction {
     branchId?: number;
     push?: boolean;
 }
-export type SignedTransaction = SignedTx & {
+export type SignedTransaction = {
+    signatures: string[];
+    serializedTx: string;
     txid?: string;
 };
 
@@ -70,4 +134,4 @@ export interface VerifyMessage {
     coin: string;
 }
 
-export { TransactionInput, TransactionOutput } from '../trezor/protobuf';
+export { TxInputType, TxOutputType } from '../trezor/protobuf';

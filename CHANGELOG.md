@@ -1,3 +1,42 @@
+# 8.1.20
+
+### Added
+- New protobuf messages with types generated automatically from json file.
+- New bitcoin `SignTx` process.
+- `cardanoSignTransaction`: stake pool registration, tx without outputs, multi asset support.
+- intermediary firmware update.
+
+### Fixed
+- `composeTransaction` using P2PKH fee calculation.
+- BroadcastChannel fallback.
+- preferred backend connection.
+
+# 8.1.19
+
+### Added
+- AccountTransaction.details (via blockchain-link).
+- composeTransaction RBF support (baseFee parameter).
+- `dustLimit` field in `blockchainEstimateFee` response.
+
+### Fixed
+- DOGE fees (via hd-wallet).
+- WebUsb reset method (via trezor-link).
+- ui promise race conditions
+
+# 8.1.18
+
+### Added
+- Trezor Bridge 2.0.30 optional update.
+
+### Fixed
+- wallet links are now pointing to `suite.trezor.io`.
+- add missing types to `features.backup_type`.
+
+# 8.1.17
+
+### Fixed
+- workaround for bootloader T1 error message.
+
 # 8.1.16
 
 ### Added

@@ -15,13 +15,13 @@ import type { BuildTxOutput, BuildTxOutputRequest } from 'hd-wallet';
 
 // local types
 import type { BitcoinNetworkInfo } from '../../../types';
-import type { TransactionOutput } from '../../../types/trezor/protobuf';
+import type { TxOutputType } from '../../../types/trezor/protobuf';
 
 /** *****
  * SignTransaction: validation
  *******/
-export const validateTrezorOutputs = (outputs: Array<TransactionOutput>, coinInfo: BitcoinNetworkInfo): Array<TransactionOutput> => {
-    const trezorOutputs: Array<TransactionOutput> = outputs.map(fixPath).map(convertMultisigPubKey.bind(null, coinInfo.network));
+export const validateTrezorOutputs = (outputs: TxOutputType[], coinInfo: BitcoinNetworkInfo): TxOutputType[] => {
+    const trezorOutputs = outputs.map(fixPath).map(convertMultisigPubKey.bind(null, coinInfo.network));
     for (const output of trezorOutputs) {
         validateParams(output, [
             { name: 'address_n', type: 'array' },
@@ -35,9 +35,32 @@ export const validateTrezorOutputs = (outputs: Array<TransactionOutput>, coinInf
             throw ERRORS.TypedError('Method_InvalidParameter', 'Cannot use address and address_n in one output');
         }
 
-        if (output.address_n && output.script_type !== 'SSTXCOMMITMENTOWNED') {
+        if (output.address_n) {
             const scriptType = getOutputScriptType(output.address_n);
             if (output.script_type !== scriptType) throw ERRORS.TypedError('Method_InvalidParameter', `Output change script_type should be set to ${scriptType}`);
+        }
+
+        if (typeof output.address === 'string' && !isValidAddress(output.address, coinInfo)) {
+            // validate address with coin info
+            throw ERRORS.TypedError('Method_InvalidParameter', `Invalid ${ coinInfo.label } output address ${ output.address }`);
+        }
+    }
+    return trezorOutputs;
+};
+
+export const validateDecredTicketOutputs = (outputs: TxOutputType[], coinInfo: BitcoinNetworkInfo): TxOutputType[] => {
+    const trezorOutputs = outputs.map(fixPath).map(convertMultisigPubKey.bind(null, coinInfo.network));
+    for (const output of trezorOutputs) {
+        validateParams(output, [
+            { name: 'address_n', type: 'array' },
+            { name: 'address', type: 'string' },
+            { name: 'amount', type: 'string' },
+            { name: 'op_return_data', type: 'string' },
+            { name: 'multisig', type: 'object' },
+        ]);
+
+        if (Object.prototype.hasOwnProperty.call(output, 'address_n') && Object.prototype.hasOwnProperty.call(output, 'address')) {
+            throw ERRORS.TypedError('Method_InvalidParameter', 'Cannot use address and address_n in one output');
         }
 
         if (typeof output.address === 'string' && !isValidAddress(output.address, coinInfo)) {
@@ -59,7 +82,6 @@ export const validateHDOutput = (output: BuildTxOutputRequest, coinInfo: Bitcoin
     };
 
     switch (output.type) {
-        case 'sstxcommitmentowned' :
         case 'opreturn' :
             validateParams(output, [ { name: 'dataHex', type: 'string' } ]);
             return {
@@ -106,20 +128,12 @@ export const validateHDOutput = (output: BuildTxOutputRequest, coinInfo: Bitcoin
 /** *****
  * Transform from hd-wallet format to Trezor
  *******/
-export const outputToTrezor = (output: BuildTxOutput, coinInfo: BitcoinNetworkInfo): TransactionOutput => {
+export const outputToTrezor = (output: BuildTxOutput, coinInfo: BitcoinNetworkInfo): TxOutputType => {
     if (output.opReturnData) {
         if (Object.prototype.hasOwnProperty.call(output, 'value')) {
             throw ERRORS.TypedError('Method_InvalidParameter', 'opReturn output should not contains value');
         }
         const data: Buffer = output.opReturnData;
-        if (output.script_type === 'SSTXCOMMITMENTOWNED' ) {
-            return {
-                address_n: output.path,
-                amount: '0',
-                op_return_data: data.toString('hex'),
-                script_type: 'SSTXCOMMITMENTOWNED',
-            };
-        }
         return {
             amount: '0',
             op_return_data: data.toString('hex'),

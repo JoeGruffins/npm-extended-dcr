@@ -1,204 +1,201 @@
 /* @flow */
 import { ERRORS } from '../../../constants';
-import type { DefaultMessageResponse } from '../../../device/DeviceCommands';
 import type { BitcoinNetworkInfo } from '../../../types';
+import type { RefTransaction, TransactionOptions, SignedTransaction } from '../../../types/networks/bitcoin';
 
 import type {
+    TypedCall,
     TxRequest,
-    RefTransaction,
-    TransactionInput,
-    TransactionOutput,
-    TransactionOptions,
-    SignTxInfoToTrezor,
-    TxRequestSerialized,
-    SignedTx,
+    TxInputType,
+    TxOutputType,
+    TxRequestSerializedType,
 } from '../../../types/trezor/protobuf';
 
-const requestPrevTxInfo = (reqTx: RefTransaction,
-    requestType: string,
-    requestIndex: string | number,
-    dataLen: ?(string | number),
-    dataOffset: ?(string | number),
-): SignTxInfoToTrezor => {
-    const i = +requestIndex;
-    if (requestType === 'TXINPUT') {
-        return {inputs: [reqTx.inputs[i]]};
-    }
-    if (requestType === 'TXOUTPUT') {
-        return {bin_outputs: [reqTx.bin_outputs[i]]};
-    }
-    if (requestType === 'TXEXTRADATA') {
-        if (dataLen == null) {
-            throw ERRORS.TypedError('Runtime', 'requestPrevTxInfo: Missing extra_data_len');
-        }
-        const dataLenN: number = +dataLen;
-
-        if (dataOffset == null) {
-            throw ERRORS.TypedError('Runtime', 'requestPrevTxInfo: Missing extra_data_offset');
-        }
-        const dataOffsetN: number = +dataOffset;
-
-        if (reqTx.extra_data == null) {
-            throw ERRORS.TypedError('Runtime', 'requestPrevTxInfo: No extra data for transaction ' + reqTx.hash);
-        }
-
-        const data = reqTx.extra_data;
-        const extra_data = data.substring(dataOffsetN * 2, (dataOffsetN + dataLenN) * 2);
-        return { extra_data };
-    }
-    if (requestType === 'TXMETA') {
-        const outputCount = reqTx.bin_outputs.length;
-        const data: ?string = reqTx.extra_data;
-        const meta: SignTxInfoToTrezor = {
-            version: reqTx.version,
-            lock_time: reqTx.lock_time,
-            inputs_cnt: reqTx.inputs.length,
-            outputs_cnt: outputCount,
-            timestamp: reqTx.timestamp,
-            version_group_id: reqTx.version_group_id,
-            expiry: reqTx.expiry,
-            branch_id: reqTx.branch_id,
-        };
-
-        if (typeof data === 'string' && data.length !== 0) {
-            return {
-                ...meta,
-                extra_data_len: data.length / 2,
-            };
-        }
-
-        return meta;
-    }
-    throw ERRORS.TypedError('Runtime', `requestPrevTxInfo: Unknown request type: ${requestType}`);
+type RefTxs = { [hash: string]: RefTransaction };
+type Props = {
+    typedCall: TypedCall;
+    txRequest: TxRequest;
+    refTxs: RefTxs;
+    inputs: TxInputType[];
+    outputs: TxOutputType[];
+    serializedTx: string[];
+    signatures: string[];
 };
 
-const requestSignedTxInfo = (inputs: Array<TransactionInput>,
-    outputs: Array<TransactionOutput>,
-    requestType: string,
-    requestIndex: string | number
-): SignTxInfoToTrezor => {
-    const i = +requestIndex;
-    if (requestType === 'TXINPUT') {
-        return {inputs: [inputs[i]]};
+const requestPrevTxInfo = ({
+    typedCall,
+    txRequest: { request_type, details },
+    refTxs,
+}: Props) => {
+    const { tx_hash } = details;
+    if (!tx_hash) {
+        throw ERRORS.TypedError('Runtime', 'requestPrevTxInfo: unknown details.tx_hash');
     }
-    if (requestType === 'TXOUTPUT') {
-        return {outputs: [outputs[i]]};
+    const tx = refTxs[tx_hash.toLowerCase()];
+    if (!tx) {
+        throw ERRORS.TypedError('Runtime', `requestPrevTxInfo: Requested unknown tx: ${tx_hash}`);
     }
-    if (requestType === 'TXMETA') {
+    if (request_type === 'TXINPUT') {
+        // bin_outputs not present in tx = invalid RefTransaction object
+        if (!tx.bin_outputs) throw ERRORS.TypedError('Runtime', `requestPrevTxInfo: Requested unknown TXINPUT: ${tx_hash}`);
+        return typedCall('TxAckPrevInput', 'TxRequest', { tx: { input: tx.inputs[details.request_index] } });
+    }
+    if (request_type === 'TXOUTPUT') {
+        // bin_outputs not present in tx = invalid RefTransaction object
+        if (!tx.bin_outputs) throw ERRORS.TypedError('Runtime', `requestPrevTxInfo: Requested unknown TXOUTPUT: ${tx_hash}`);
+        return typedCall('TxAckPrevOutput', 'TxRequest', { tx: { output: tx.bin_outputs[details.request_index] } });
+    }
+    if (request_type === 'TXORIGINPUT') {
+        // outputs not present in tx = invalid RefTransaction object
+        if (!tx.outputs) throw ERRORS.TypedError('Runtime', `requestPrevTxInfo: Requested unknown TXORIGINPUT: ${tx_hash}`);
+        return typedCall('TxAckInput', 'TxRequest', { tx: { input: tx.inputs[details.request_index] } });
+    }
+    if (request_type === 'TXORIGOUTPUT') {
+        // outputs not present in tx = invalid RefTransaction object
+        if (!tx.outputs) throw ERRORS.TypedError('Runtime', `requestPrevTxInfo: Requested unknown TXORIGOUTPUT: ${tx_hash}`);
+        return typedCall('TxAckOutput', 'TxRequest', { tx: { output: tx.outputs[details.request_index] } });
+    }
+    if (request_type === 'TXEXTRADATA') {
+        if (typeof details.extra_data_len !== 'number') {
+            throw ERRORS.TypedError('Runtime', 'requestPrevTxInfo: Missing extra_data_len');
+        }
+        if (typeof details.extra_data_offset !== 'number') {
+            throw ERRORS.TypedError('Runtime', 'requestPrevTxInfo: Missing extra_data_offset');
+        }
+        if (typeof tx.extra_data !== 'string') {
+            throw ERRORS.TypedError('Runtime', 'requestPrevTxInfo: No extra data for transaction ' + tx.hash);
+        }
+        const data = tx.extra_data;
+        const dataLen = details.extra_data_len;
+        const dataOffset = details.extra_data_offset;
+        const extra_data_chunk = data.substring(dataOffset * 2, (dataOffset + dataLen) * 2);
+        return typedCall('TxAckPrevExtraData', 'TxRequest', { tx: { extra_data_chunk } });
+    }
+    if (request_type === 'TXMETA') {
+        const data = tx.extra_data;
+        const meta = {
+            version: tx.version,
+            lock_time: tx.lock_time,
+            inputs_count: tx.inputs.length,
+            outputs_count: tx.outputs ? tx.outputs.length : tx.bin_outputs.length,
+            timestamp: tx.timestamp,
+            version_group_id: tx.version_group_id,
+            expiry: tx.expiry,
+            branch_id: tx.branch_id,
+            extra_data_len: data ? data.length / 2 : undefined,
+        };
+        return typedCall('TxAckPrevMeta', 'TxRequest', { tx: meta });
+    }
+    throw ERRORS.TypedError('Runtime', `requestPrevTxInfo: Unknown request type: ${request_type}`);
+};
+
+const requestSignedTxInfo = ({
+    typedCall,
+    txRequest: { request_type, details },
+    inputs,
+    outputs,
+}: Props) => {
+    if (request_type === 'TXINPUT') {
+        return typedCall('TxAckInput', 'TxRequest', { tx: { input: inputs[details.request_index] } });
+    }
+    if (request_type === 'TXOUTPUT') {
+        return typedCall('TxAckOutput', 'TxRequest', { tx: { output: outputs[details.request_index] } });
+    }
+    if (request_type === 'TXMETA') {
         throw ERRORS.TypedError('Runtime', 'requestSignedTxInfo: Cannot read TXMETA from signed transaction');
     }
-    if (requestType === 'TXEXTRADATA') {
+    if (request_type === 'TXEXTRADATA') {
         throw ERRORS.TypedError('Runtime', 'requestSignedTxInfo: Cannot read TXEXTRADATA from signed transaction');
     }
-    throw ERRORS.TypedError('Runtime', `requestSignedTxInfo: Unknown request type: ${requestType}`);
+    throw ERRORS.TypedError('Runtime', `requestSignedTxInfo: Unknown request type: ${request_type}`);
 };
 
 // requests information about a transaction
 // can be either signed transaction itself of prev transaction
-const requestTxInfo = (m: TxRequest,
-    index: {[hash: string]: RefTransaction},
-    inputs: Array<TransactionInput>,
-    outputs: Array<TransactionOutput>
-): SignTxInfoToTrezor => {
-    const md = m.details;
-    const hash = md.tx_hash;
-    if (hash) {
-        const reqTx = index[hash.toLowerCase()];
-        if (!reqTx) {
-            throw ERRORS.TypedError('Runtime', `requestTxInfo: Requested unknown tx: ${hash}`);
-        }
-        return requestPrevTxInfo(
-            reqTx,
-            m.request_type,
-            md.request_index,
-            md.extra_data_len,
-            md.extra_data_offset
-        );
+const requestTxAck = (props: Props) => {
+    const { tx_hash } = props.txRequest.details;
+    if (tx_hash) {
+        return requestPrevTxInfo(props);
     } else {
-        return requestSignedTxInfo(inputs, outputs, m.request_type, md.request_index);
+        return requestSignedTxInfo(props);
     }
 };
 
-const saveTxSignatures = (ms: TxRequestSerialized,
-    serializedTx: {serialized: string},
-    signatures: Array<string>
+const saveTxSignatures = (
+    txRequest?: TxRequestSerializedType,
+    serializedTx: string[],
+    signatures: string[],
 ) => {
-    if (ms) {
-        const _signatureIndex = ms.signature_index;
-        const _signature = ms.signature;
-        const _serializedTx = ms.serialized_tx;
-        if (_serializedTx != null) {
-            serializedTx.serialized += _serializedTx;
+    if (!txRequest) return;
+    const { signature_index, signature, serialized_tx } = txRequest;
+    if (serialized_tx) {
+        serializedTx.push(serialized_tx);
+    }
+    if (typeof signature_index === 'number') {
+        if (!signature) {
+            throw ERRORS.TypedError('Runtime', 'saveTxSignatures: Unexpected null in trezor:TxRequestSerialized signature.');
         }
-        if (_signatureIndex != null) {
-            if (_signature == null) {
-                throw ERRORS.TypedError('Runtime', 'saveTxSignatures: Unexpected null in trezor:TxRequestSerialized signature.');
-            }
-            signatures[_signatureIndex] = _signature;
-        }
+        signatures[signature_index] = signature;
     }
 };
 
-const processTxRequest = async (typedCall: (type: string, resType: string, msg: Object) => Promise<DefaultMessageResponse>,
-    m: TxRequest,
-    serializedTx: {serialized: string},
-    signatures: Array<string>,
-    index: {[key: string]: RefTransaction},
-    inputs: Array<TransactionInput>,
-    outputs: Array<TransactionOutput>
-): Promise<SignedTx> => {
-    saveTxSignatures(m.serialized, serializedTx, signatures);
-    if (m.request_type === 'TXFINISHED') {
+const processTxRequest = async (props: Props) => {
+    const {
+        typedCall,
+        txRequest,
+        refTxs,
+        inputs,
+        outputs,
+        serializedTx,
+        signatures,
+    } = props;
+    saveTxSignatures(txRequest.serialized, serializedTx, signatures);
+    if (txRequest.request_type === 'TXFINISHED') {
         return Promise.resolve({
             signatures: signatures,
-            serializedTx: serializedTx.serialized,
+            serializedTx: serializedTx.join(''),
         });
     }
 
-    const resTx: SignTxInfoToTrezor = requestTxInfo(m, index, inputs, outputs);
-
-    const response: DefaultMessageResponse = await typedCall('TxAck', 'TxRequest', { tx: resTx });
-    return await processTxRequest(
+    const { message } = await requestTxAck(props);
+    return processTxRequest({
         typedCall,
-        response.message,
+        txRequest: message,
+        refTxs,
+        inputs,
+        outputs,
         serializedTx,
         signatures,
-        index,
-        inputs,
-        outputs
-    );
+    });
 };
 
-export default async (typedCall: (type: string, resType: string, msg: Object) => Promise<DefaultMessageResponse>,
-    inputs: Array<TransactionInput>,
-    outputs: Array<TransactionOutput>,
-    refTxs: Array<RefTransaction>,
+export default async (
+    typedCall: TypedCall,
+    inputs: TxInputType[],
+    outputs: TxOutputType[],
+    refTxsArray: RefTransaction[],
     options: TransactionOptions,
     coinInfo: BitcoinNetworkInfo,
-): Promise<SignedTx> => {
-    const index: {[key: string]: RefTransaction} = {};
-    refTxs.forEach((tx: RefTransaction) => {
-        index[tx.hash.toLowerCase()] = tx;
+): Promise<SignedTransaction> => {
+    const refTxs: RefTxs = {};
+    refTxsArray.forEach(tx => {
+        refTxs[tx.hash.toLowerCase()] = tx;
     });
-    const signatures: Array<string> = [];
-    const serializedTx: {serialized: string} = {serialized: ''};
 
-    const response: DefaultMessageResponse = await typedCall('SignTx', 'TxRequest', {
+    const { message } = await typedCall('SignTx', 'TxRequest', {
         ...options,
         inputs_count: inputs.length,
         outputs_count: outputs.length,
         coin_name: coinInfo.name,
     });
 
-    const signed: SignedTx = await processTxRequest(
+    return processTxRequest({
         typedCall,
-        response.message,
-        serializedTx,
-        signatures,
-        index,
+        txRequest: message,
+        refTxs,
         inputs,
-        outputs
-    );
-
-    return signed;
+        outputs,
+        serializedTx: [],
+        signatures: [],
+    });
 };

@@ -1,4 +1,4 @@
-# Trezor Connect API version 8.1.16
+# Trezor Connect API version 8.1.20
 [![Build Status](https://travis-ci.org/trezor/connect.png?branch=develop)](https://travis-ci.org/trezor/connect)
 [![NPM](https://img.shields.io/npm/v/trezor-connect.svg)](https://www.npmjs.org/package/trezor-connect)
 [![Known Vulnerabilities](https://snyk.io/test/github/trezor/connect/badge.svg?targetFile=package.json)](https://snyk.io/test/github/trezor/connect?targetFile=package.json)
@@ -12,8 +12,10 @@ Trezor Connect is a platform for easy integration of Trezor into 3rd party servi
 ## Versions
 We started tagging versions and releasing them to separate URLs, so we don't break any existing (and working) integrations.
 
-Currently, we are at version 8, which has an url https://connect.trezor.io/8/trezor-connect.js.
-<br> 
+Currently, we are at version 8, which has an url https://connect.trezor.io/8/trezor-connect.js. If you would like to find out which version is deployed precisely simply run:
+
+`curl -s https://connect.trezor.io/8/trezor-connect.js | grep VERSION`
+
 The older version listed below are still working, but new features are not being added.
 * https://connect.trezor.io/7/trezor-connect.js,
 * https://connect.trezor.io/6/trezor-connect.js,

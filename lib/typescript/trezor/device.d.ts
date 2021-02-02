@@ -1,5 +1,6 @@
 import { getInfo } from '@trezor/rollout';
 import { DEVICE } from '../constants';
+import { Features } from './protobuf';
 
 export interface DeviceStateResponse {
     state: string;
@@ -30,41 +31,6 @@ export interface FirmwareRange {
 }
 
 export type FirmwareRelease = ReturnType<typeof getInfo>;
-
-export interface Features {
-    bootloader_hash?: string | null;
-    bootloader_mode?: boolean | null;
-    device_id: string | null;
-    firmware_present?: boolean | null;
-    flags: number;
-    fw_major?: number | null;
-    fw_minor?: number | null;
-    fw_patch?: number | null;
-    fw_vendor?: string | null;
-    fw_vendor_keys?: string | null;
-    imported?: boolean | null;
-    initialized: boolean;
-    label: string | null;
-    language?: string | null;
-    major_version: number;
-    minor_version: number;
-    model: string;
-    needs_backup: boolean;
-    no_backup: boolean;
-    passphrase_cached: boolean;
-    passphrase_protection: boolean;
-    patch_version: number;
-    pin_cached: boolean;
-    unlocked?: boolean; // replacement for "pin_cached" since 2.3.2
-    pin_protection: boolean;
-    revision: string;
-    unfinished_backup: boolean;
-    vendor: string;
-    recovery_mode?: boolean;
-    session_id?: string;
-    passphrase_always_on_device?: boolean;
-    capabilities?: string[];
-}
 
 export type KnownDevice = {
     type: 'acquired';
@@ -100,3 +66,5 @@ export interface DeviceEvent {
     type: typeof DEVICE.CONNECT | typeof DEVICE.CONNECT_UNACQUIRED | typeof DEVICE.CHANGED | typeof DEVICE.DISCONNECT;
     payload: Device;
 }
+
+export type { Features } from './protobuf';

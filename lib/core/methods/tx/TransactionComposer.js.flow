@@ -20,6 +20,7 @@ type Options = {
     utxo: AccountUtxo[];
     outputs: BuildTxOutputRequest[];
     coinInfo: BitcoinNetworkInfo;
+    baseFee?: number;
 }
 
 export default class TransactionComposer {
@@ -28,6 +29,7 @@ export default class TransactionComposer {
     outputs: BuildTxOutputRequest[];
     coinInfo: BitcoinNetworkInfo;
     blockHeight: number = 0;
+    baseFee: number;
     feeLevels: Fees;
     composed: {[key: string]: BuildTxResult} = {};
 
@@ -36,6 +38,7 @@ export default class TransactionComposer {
         this.outputs = options.outputs;
         this.coinInfo = options.coinInfo;
         this.blockHeight = 0;
+        this.baseFee = options.baseFee || 0;
         this.feeLevels = new Fees(options.coinInfo);
 
         // map to hd-wallet/buildTx format
@@ -136,26 +139,40 @@ export default class TransactionComposer {
     }
 
     compose(feeRate: string) {
-        const { account, coinInfo } = this;
+        const { account, coinInfo, baseFee } = this;
         const { addresses } = account;
         if (!addresses) return { type: 'error', error: 'ADDRESSES-NOT-SET' };
-        const changeId = addresses.change.findIndex(a => a.transfers < 1);
-        if (changeId < 0) return { type: 'error', error: 'CHANGE-ADDRESS-NOT-SET' };
-        const changeAddress = addresses.change[changeId].address;
-        const inputAmounts = coinInfo.segwit || coinInfo.forkid !== null || coinInfo.network.consensusBranchId !== null;
+        // find not used change address or fallback to the last in the list
+        const changeAddress = addresses.change.find(a => a.transfers < 1) || addresses.change[addresses.change.length - 1];
+        const changeId = getHDPath(changeAddress.path).slice(-1)[0]; // get address id from the path
+        // const inputAmounts = coinInfo.segwit || coinInfo.forkid !== null || coinInfo.network.consensusBranchId !== null;
+
+        const enhancement = {
+            baseFee,
+            floorBaseFee: false,
+            dustOutputFee: 0,
+        };
+
+        // DOGE changed fee policy and requires:
+        if (coinInfo.shortcut === 'DOGE') {
+            enhancement.floorBaseFee = enhancement.baseFee === 0; // fee rounded down not to overprice tx (see hd-wallet) use only if baseFee is not specified
+            enhancement.baseFee = enhancement.baseFee || 100000000; // default 1 DOGE base fee
+            enhancement.dustOutputFee = 100000000; // 1 DOGE for every output lower than dust (dust = 1 DOGE)
+        }
 
         const result = buildTx({
             utxos: this.utxos,
             outputs: this.outputs,
             height: this.blockHeight,
             feeRate,
-            segwit: coinInfo.segwit,
-            inputAmounts,
+            segwit: coinInfo.segwit && account.type !== 'legacy',
+            inputAmounts: true, // since 2.3.4 every utxo needs to have "amount" field
             basePath: account.address_n,
             network: coinInfo.network,
             changeId,
-            changeAddress,
+            changeAddress: changeAddress.address,
             dustThreshold: coinInfo.dustLimit,
+            ...enhancement,
         });
         // hd-wallet returns `max = -1` when sendMax is not requested
         // https://github.com/trezor/hd-wallet/blob/master/src/build-tx/coinselect.js#L101
