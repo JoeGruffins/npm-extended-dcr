@@ -169,13 +169,27 @@ export const verifyTicket = async (
         let scriptA
 
         if (i == 0) {
-          const h = getAddressHash(output.address, coinInfo)
-          scriptA = BitcoinJsScript.sstxSubmissionPKH.output.encode(h);
+            const amount = output.amount;
+            if (amount !== bitcoinTx.outs[i].value) {
+                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
+            }
+            const h = getAddressHash(output.address, coinInfo)
+            scriptA = BitcoinJsScript.sstxSubmissionPKH.output.encode(h);
         } else if (i == 1) {
-          scriptA = BitcoinJsScript.nullData.output.encode(Buffer.from(output.op_return_data, 'hex'));
+            // Should be no script.
+            if (output.address) {
+                throw ERRORS.TypedError('Runtime', `verifyTx: Output 1 should have not address.`);
+            }
+            if (output.address_n === null) {
+                throw ERRORS.TypedError('Runtime', `verifyTx: Output 1 should have address_n.`);
+            }
         } else {
-          const pkh = getAddressHash(output.address, coinInfo)
-          scriptA = BitcoinJsScript.sstxChange.output.encode(pkh);
+            const amount = output.amount;
+            if (amount !== bitcoinTx.outs[i].value) {
+                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
+            }
+            const pkh = getAddressHash(output.address, coinInfo)
+            scriptA = BitcoinJsScript.sstxChange.output.encode(pkh);
         }
 
         if (scriptA && scriptA.compare(scriptB) !== 0) {
