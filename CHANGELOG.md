@@ -1,3 +1,38 @@
+# 8.1.25
+
+### Fixed
+- blockchain-link workers memory leak
+- resolve cycled dependencies
+
+# 8.1.24
+
+### Fixed
+- log messages limit
+
+# 8.1.23
+
+### Added
+- `AccountUtxo.required` optional field used in `composeTransaction` method
+
+### Fixed
+- AccountTransaction object: `empty`, `lockTime`, `amount`, `totalSpent`, `ethereumSpecific` (via @trezor/blockchain-link 1.0.16 and 1.0.17)
+- invalid protobuf messages used for unacquired devices (missing Features.capabilities)
+
+# 8.1.22
+
+### Added
+- 2.3.5/1.9.4 firmware release.
+
+### Fixed
+- protobuf types (Features, TxOutput)
+
+# 8.1.21
+
+### Fixed
+- `signTransaction` missing input amount fallback.
+- `cardanoSignTransaction` parameters validation.
+- `DOGE` big amount serialization (via @trezor/utxo-lib)
+
 # 8.1.20
 
 ### Added

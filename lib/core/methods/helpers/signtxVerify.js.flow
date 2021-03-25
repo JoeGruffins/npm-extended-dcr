@@ -131,8 +131,9 @@ export const verifyTx = async (
 
         if (outputs[i].amount) {
             const amount = outputs[i].amount;
-            if (amount !== bitcoinTx.outs[i].value) {
-                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
+            const bitTxAmt = typeof bitcoinTx.outs[i].value === 'number' ? bitcoinTx.outs[i].value.toString() : bitcoinTx.outs[i].value
+            if (amount !== bitTxAmt) {
+                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitTxAmt}`);
             }
         }
 
@@ -170,30 +171,32 @@ export const verifyTicket = async (
 
         if (i == 0) {
             const amount = output.amount;
-            if (amount !== bitcoinTx.outs[i].value) {
-                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
+            const bitTxAmt = typeof bitcoinTx.outs[i].value === 'number' ? bitcoinTx.outs[i].value.toString() : bitcoinTx.outs[i].value
+            if (amount !== bitTxAmt) {
+                throw ERRORS.TypedError('Runtime', `verifyTicket: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitTxAmt}`);
             }
             const h = getAddressHash(output.address, coinInfo)
             scriptA = BitcoinJsScript.sstxSubmissionPKH.output.encode(h);
         } else if (i == 1) {
             // Should be no script.
             if (output.address) {
-                throw ERRORS.TypedError('Runtime', `verifyTx: Output 1 should have not address.`);
+                throw ERRORS.TypedError('Runtime', `verifyTicket: Output 1 should have not address.`);
             }
             if (output.address_n === null) {
-                throw ERRORS.TypedError('Runtime', `verifyTx: Output 1 should have address_n.`);
+                throw ERRORS.TypedError('Runtime', `verifyTxicket: Output 1 should have address_n.`);
             }
         } else {
             const amount = output.amount;
-            if (amount !== bitcoinTx.outs[i].value) {
-                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
+            const bitTxAmt = typeof bitcoinTx.outs[i].value === 'number' ? bitcoinTx.outs[i].value.toString() : bitcoinTx.outs[i].value
+            if (amount !== bitTxAmt) {
+                throw ERRORS.TypedError('Runtime', `verifyTicket: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitTxAmt}`);
             }
             const pkh = getAddressHash(output.address, coinInfo)
             scriptA = BitcoinJsScript.sstxChange.output.encode(pkh);
         }
 
         if (scriptA && scriptA.compare(scriptB) !== 0) {
-            throw ERRORS.TypedError('Runtime', `verifyTx: Output ${i} scripts differ`);
+            throw ERRORS.TypedError('Runtime', `verifyTxicket: Output ${i} scripts differ`);
         }
     }
 };

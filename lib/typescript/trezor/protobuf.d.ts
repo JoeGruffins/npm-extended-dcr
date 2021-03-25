@@ -332,6 +332,10 @@ export type TxOutputBinType = {
 // - TxOutputType replacement
 // TxOutputType needs more exact types
 // differences: external output (no address_n), opreturn output (no address_n, no address)
+// eslint-disable-next-line no-unused-vars
+// type Exclude<A, B> = $Keys<$Diff<typeof Enum_OutputScriptType, { PAYTOOPRETURN: 3 }>>; // flowtype equivalent of typescript Exclude
+export type ChangeOutputScriptType = Exclude<OutputScriptType, 'PAYTOOPRETURN'>;
+
 export type TxOutputType = {
     address: string;
     address_n?: typeof undefined;
@@ -343,7 +347,7 @@ export type TxOutputType = {
 } | {
     address?: typeof undefined;
     address_n: number[];
-    script_type: OutputScriptType;
+    script_type: ChangeOutputScriptType;
     amount: string;
     multisig?: MultisigRedeemScriptType;
     orig_hash?: string;
@@ -594,8 +598,8 @@ export type CardanoPublicKey = {
 
 export type CardanoTxInputType = {
     address_n?: number[];
-    prev_hash?: string;
-    prev_index?: number;
+    prev_hash: string;
+    prev_index: number;
 };
 
 export type CardanoTokenType = {
@@ -610,7 +614,7 @@ export type CardanoAssetGroupType = {
 
 export type CardanoTxOutputType = {
     address?: string;
-    amount?: number;
+    amount: number;
     address_parameters?: CardanoAddressParametersType;
     token_bundle: CardanoAssetGroupType[];
 };
@@ -647,7 +651,7 @@ export type CardanoPoolParametersType = {
 };
 
 export type CardanoTxCertificateType = {
-    type?: CardanoCertificateType;
+    type: CardanoCertificateType;
     path?: number[];
     pool?: string;
     pool_parameters?: CardanoPoolParametersType;
@@ -655,17 +659,17 @@ export type CardanoTxCertificateType = {
 
 export type CardanoTxWithdrawalType = {
     path: number[];
-    amount?: number;
+    amount: number;
 };
 
 // CardanoSignTx
 export type CardanoSignTx = {
     inputs: CardanoTxInputType[];
     outputs: CardanoTxOutputType[];
-    protocol_magic?: number;
-    fee?: string | number;
+    protocol_magic: number;
+    fee: string | number;
     ttl?: string | number;
-    network_id?: number;
+    network_id: number;
     certificates: CardanoTxCertificateType[];
     withdrawals: CardanoTxWithdrawalType[];
     metadata?: string;
@@ -779,8 +783,8 @@ export type Deprecated_PassphraseStateAck = {};
 // CipherKeyValue
 export type CipherKeyValue = {
     address_n: number[];
-    key?: string;
-    value?: string;
+    key: string;
+    value: string;
     encrypt?: boolean;
     ask_on_encrypt?: boolean;
     ask_on_decrypt?: boolean;
@@ -789,7 +793,7 @@ export type CipherKeyValue = {
 
 // CipheredKeyValue
 export type CipheredKeyValue = {
-    value?: string;
+    value: string;
 };
 
 // IdentityType
@@ -804,7 +808,7 @@ export type IdentityType = {
 
 // SignIdentity
 export type SignIdentity = {
-    identity?: IdentityType;
+    identity: IdentityType;
     challenge_hidden?: string;
     challenge_visual?: string;
     ecdsa_curve_name?: string;
@@ -819,14 +823,14 @@ export type SignedIdentity = {
 
 // GetECDHSessionKey
 export type GetECDHSessionKey = {
-    identity?: IdentityType;
-    peer_public_key?: string;
+    identity: IdentityType;
+    peer_public_key: string;
     ecdsa_curve_name?: string;
 };
 
 // ECDHSessionKey
 export type ECDHSessionKey = {
-    session_key?: string;
+    session_key: string;
 };
 
 export enum DebugSwipeDirection {
@@ -1296,9 +1300,9 @@ export type LiskMessageSignature = {
 
 // LiskVerifyMessage
 export type LiskVerifyMessage = {
-    public_key?: string;
-    signature?: string;
-    message?: string;
+    public_key: string;
+    signature: string;
+    message: string;
 };
 
 // Initialize
@@ -1332,32 +1336,32 @@ export type Capability = keyof typeof Enum_Capability;
 
 // Features
 export type Features = {
-    vendor?: string;
+    vendor: string;
     major_version: number;
     minor_version: number;
     patch_version: number;
     bootloader_mode?: boolean | null;
-    device_id?: string | null;
-    pin_protection?: boolean;
-    passphrase_protection?: boolean;
+    device_id: string | null;
+    pin_protection: boolean;
+    passphrase_protection: boolean;
     language?: string;
-    label?: string | null;
-    initialized?: boolean;
-    revision?: string;
+    label: string | null;
+    initialized: boolean;
+    revision: string;
     bootloader_hash?: string | null;
     imported?: boolean;
     unlocked?: boolean;
     firmware_present?: boolean | null;
-    needs_backup?: boolean;
-    flags?: number;
+    needs_backup: boolean;
+    flags: number;
     model: string;
     fw_major?: number | null;
     fw_minor?: number | null;
     fw_patch?: number | null;
     fw_vendor?: string | null;
     fw_vendor_keys?: string;
-    unfinished_backup?: boolean;
-    no_backup?: boolean;
+    unfinished_backup: boolean;
+    no_backup: boolean;
     recovery_mode?: boolean;
     capabilities: Capability[];
     backup_type?: BackupType;
@@ -1670,7 +1674,7 @@ export type NEMDecryptMessage = {
 
 // NEMDecryptedMessage
 export type NEMDecryptedMessage = {
-    payload?: string;
+    payload: string;
 };
 
 // RippleGetAddress
@@ -1686,7 +1690,7 @@ export type RippleAddress = {
 
 export type RipplePayment = {
     amount: string | number;
-    destination?: string;
+    destination: string;
     destination_tag?: number;
 };
 

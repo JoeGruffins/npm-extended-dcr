@@ -20,6 +20,7 @@ export interface BlockbookTransaction {
     blockHash?: string;
     confirmations: number;
     blockTime: number;
+    lockTime?: number;
     value: string;
     valueIn: string;
     fees: string;
@@ -27,6 +28,7 @@ export interface BlockbookTransaction {
     ethereumSpecific?: {
         status: number;
         nonce: number;
+        data?: string;
         gasLimit: number;
         gasUsed?: number;
         gasPrice: string;

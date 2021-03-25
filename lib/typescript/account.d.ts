@@ -1,5 +1,5 @@
 import { TxInputType, TxOutputType } from './trezor/protobuf';
-import { VinVout } from './backend/transactions';
+import { VinVout, BlockbookTransaction } from './backend/transactions';
 
 // getAccountInfo params
 export interface GetAccountInfo {
@@ -55,6 +55,7 @@ export interface AccountUtxo {
     path: string;
     confirmations: number;
     coinbase?: boolean;
+    required?: boolean;
 }
 
 // Transaction object
@@ -80,27 +81,22 @@ export interface TransactionTarget {
 }
 
 export interface AccountTransaction {
-    type: 'sent' | 'recv' | 'self' | 'unknown';
+    type: 'sent' | 'recv' | 'self' | 'failed' | 'unknown';
 
     txid: string;
     blockTime?: number;
     blockHeight?: number;
     blockHash?: string;
+    lockTime?: number;
 
     amount: string;
     fee: string;
-    // total?: string; // amount + total
+    totalSpent: string; // amount + fee
 
     targets: TransactionTarget[];
     tokens: TokenTransfer[];
     rbf?: boolean;
-    ethereumSpecific?: {
-        status: number;
-        nonce: number;
-        gasLimit: number;
-        gasUsed?: number;
-        gasPrice: string;
-    };
+    ethereumSpecific?: BlockbookTransaction['ethereumSpecific'];
     details: {
         vin: VinVout[];
         vout: VinVout[];
