@@ -18,6 +18,11 @@
     "javascript"
   ],
   "main": "lib/index.js",
+  "browser": {
+    "./lib/env/node": "./lib/env/browser",
+    "./lib/env/node/workers": "./lib/env/browser/workers",
+    "./lib/env/node/networkUtils": "./lib/env/browser/networkUtils"
+  },
   "dependencies": {
     "@babel/runtime": "^7.12.5",
     "events": "^3.2.0",
