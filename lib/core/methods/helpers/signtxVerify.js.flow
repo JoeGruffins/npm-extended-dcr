@@ -131,9 +131,8 @@ export const verifyTx = async (
 
         if (outputs[i].amount) {
             const amount = outputs[i].amount;
-            const bitTxAmt = typeof bitcoinTx.outs[i].value === 'number' ? bitcoinTx.outs[i].value.toString() : bitcoinTx.outs[i].value
-            if (amount !== bitTxAmt) {
-                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitTxAmt}`);
+            if (amount !== bitcoinTx.outs[i].value) {
+                throw ERRORS.TypedError('Runtime', `verifyTx: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
             }
         }
 
@@ -171,9 +170,8 @@ export const verifyTicket = async (
 
         if (i == 0) {
             const amount = output.amount;
-            const bitTxAmt = typeof bitcoinTx.outs[i].value === 'number' ? bitcoinTx.outs[i].value.toString() : bitcoinTx.outs[i].value
-            if (amount !== bitTxAmt) {
-                throw ERRORS.TypedError('Runtime', `verifyTicket: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitTxAmt}`);
+            if (amount !== bitcoinTx.outs[i].value) {
+                throw ERRORS.TypedError('Runtime', `verifyTicket: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
             }
             const h = getAddressHash(output.address, coinInfo)
             scriptA = BitcoinJsScript.sstxSubmissionPKH.output.encode(h);
@@ -187,9 +185,8 @@ export const verifyTicket = async (
             }
         } else {
             const amount = output.amount;
-            const bitTxAmt = typeof bitcoinTx.outs[i].value === 'number' ? bitcoinTx.outs[i].value.toString() : bitcoinTx.outs[i].value
-            if (amount !== bitTxAmt) {
-                throw ERRORS.TypedError('Runtime', `verifyTicket: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitTxAmt}`);
+            if (amount !== bitcoinTx.outs[i].value) {
+                throw ERRORS.TypedError('Runtime', `verifyTicket: Wrong output amount at output ${i}. Requested: ${amount}, signed: ${bitcoinTx.outs[i].value}`);
             }
             const pkh = getAddressHash(output.address, coinInfo)
             scriptA = BitcoinJsScript.sstxChange.output.encode(pkh);
