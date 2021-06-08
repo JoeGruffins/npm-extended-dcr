@@ -30,7 +30,7 @@
     "@trezor/blockchain-link": "^1.0.17",
     "@trezor/rollout": "1.0.7",
     "bchaddrjs": "0.4.9",
-    "@trezor/utxo-lib": "https://github.com/JoeGruffins/trezor-utxo-lib#5e6dbfc3764bd8f31da4140f897d792d76dcdd90",
+    "@trezor/utxo-lib": "https://github.com/JoeGruffins/trezor-utxo-lib#5be5fc9508ea6db5cd988fbf10ba358fe9128aee",
     "bignumber.js": "^9.0.1",
     "bowser": "^2.11.0",
     "hd-wallet": "9.1.1",
